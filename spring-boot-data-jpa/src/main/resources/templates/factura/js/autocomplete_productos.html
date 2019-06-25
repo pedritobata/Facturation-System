@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+
+	<script type="text/javascript" th:fragment="javascript">
+	   $(document).ready(function(){
+		   $("#buscar_producto").autocomplete({
+			  source: function(request,response){//este metodo source realiza las peticiones ajax
+				  $.ajax({
+					 url: "/factura/cargar-productos/" + request.term,
+					 dataType: "json",
+					 data:{//este campo data sirve para pasar parametros de request
+						 term: request.term
+					 },
+					 success: function(data){//recibe el response de la llamada ajax
+						 response($.map(data, function(item){
+							 return {
+								value: item.id,
+								label: item.nombre,
+								precio: item.precio
+							 };
+						 }));//el atributo response sirve para pasar la data al autocomplete
+					 }
+				  });
+			  },
+			  select:function(event, ui){
+				  //este método sirve para hacer lo que se desee cuando se seleccione un elemento del autocomplete
+				 // $("#buscar_producto").val(ui.item.label);
+				  
+				  if(itemsHelper.hasProducto(ui.item.value)){
+					  itemsHelper.incrementaCantidad(ui.item.value, ui.item.precio);
+					  return false;//si ya existe el producto , ya no genero una nuevo item de factura, solo incremento 
+					  //la cantidad del que ya existe. es decir, no hay productos repetidos en el detalle de factura
+				  }
+				  
+				  var linea = $("#plantillaItemsFactura").html();
+				  
+				  linea = linea.replace(/{ID}/g, ui.item.value);
+				  linea = linea.replace(/{NOMBRE}/g, ui.item.label);
+				  linea = linea.replace(/{PRECIO}/g, ui.item.precio);
+				  
+				  $("#cargarItemProductos tbody").append(linea);
+				  itemsHelper.calcularImporte(ui.item.value, ui.item.precio, 1);
+				  
+				  return false;
+			  }
+		   });
+		   
+		   $("form").submit(function(){
+			   //IMPORTANTE : Borramos la plantilla de Items Factura , ya que se estaría considerando
+			   //una linea de itemFactura extra que encima tiene valores "raros" o sea de plantilla y cuando
+			   //se envíen los items al controlador paara ser guardados se va a caer la aplicacion
+			  $("#plantillaItemsFactura").remove(); 
+			  return;
+		   });
+	   });
+	   
+	   var itemsHelper = {
+		   calcularImporte : function(id, precio, cantidad){
+			   $("#total_importe_" + id).html(parseInt(precio * parseInt(cantidad)));
+			   this.calcularGranTotal();
+		   },
+		   hasProducto : function(id){
+			   
+			   var resultado = false;
+			   $('input[name="item_id[]"]').each(function(){
+				   if(parseInt(id) == parseInt($(this).val())){
+					   resultado = true;
+				   }
+			   });
+			   
+			   return resultado;
+		   },
+		   incrementaCantidad : function(id, precio){
+			   var cantidad = $("#cantidad_" + id).val()? parseInt($("#cantidad_" + id).val()): 0 ;
+			   $("#cantidad_" + id).val(++cantidad);
+			   this.calcularImporte(id,precio,cantidad);
+		   },
+		   eliminarLineaFactura : function(id){
+			   $("#row_" + id).remove();
+			   this.calcularGranTotal();
+		   },
+		   calcularGranTotal : function(){
+			   var total = 0;
+			   $('span[id^="total_importe_"]').each(function(){
+				   total += parseInt($(this).html());
+			   });
+			   $('#gran_total').html(total);
+		   }
+	   };
+	   
+	  
+	</script>
+</body>
+</html>
