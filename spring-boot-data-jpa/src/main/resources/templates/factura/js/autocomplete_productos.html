@@ -6,10 +6,13 @@
 
 	<script type="text/javascript" th:fragment="javascript">
 	   $(document).ready(function(){
+		   
+		   var urlAjax = $('urlAjax').val();
+		   
 		   $("#buscar_producto").autocomplete({
 			  source: function(request,response){//este metodo source realiza las peticiones ajax
 				  $.ajax({
-					 url: "/factura/cargar-productos/" + request.term,
+					 url: urlAjax + request.term,
 					 dataType: "json",
 					 data:{//este campo data sirve para pasar parametros de request
 						 term: request.term
